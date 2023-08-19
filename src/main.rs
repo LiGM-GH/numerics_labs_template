@@ -10,12 +10,13 @@
 
 use color_eyre::{eyre::anyhow, Result};
 use plotters::prelude::*;
+use plotters::style::colors;
 
-const Y_MAX: f64 = 50.0;
-const Y_MIN: f64 = -10.0;
-const X_MAX: f64 = 10.0;
-const X_MIN: f64 = -10.0;
-const NUM_POINTS_ON_DISPLAY: i32 = 1500;
+const Y_MAX: f64 = 5.0;
+const Y_MIN: f64 = -1.0;
+const X_MAX: f64 = 0.0;
+const X_MIN: f64 = -4.0;
+const NUM_POINTS_ON_DISPLAY: i32 = 15000;
 
 macro_rules! draw_function {
     ($chart:ident ($color:expr): $fun:expr) => {
@@ -44,12 +45,13 @@ fn main() -> Result<()> {
     // Program can still execute if this fails, so we'll just ignore failure if it occurs.
     color_eyre::install().ok();
 
-    let args = std::env::args().collect::<Vec<_>>();
-    let Some(image_path) = args.get(1) else {
+    let args = std::env::args().nth(1);
+
+    let Some(image_path) = args else {
         return Err(anyhow!("Couldn't get filename to write JPG to. Provide it as an command-line argument"));
     };
 
-    let root = BitMapBackend::new(image_path, (640, 480)).into_drawing_area();
+    let root = BitMapBackend::new(&image_path, (640, 480)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
@@ -62,10 +64,7 @@ fn main() -> Result<()> {
 
     chart.configure_mesh().draw()?;
 
-    draw_function!(chart (plotters::style::colors::BLACK): |x| 0.0);
-    draw_function!(chart (plotters::style::colors::full_palette::DEEPPURPLE_900): |x| given_f(x));
-    draw_function!(chart (plotters::style::colors::full_palette::ORANGE): |x| x + 0.2);
-    draw_function!(chart (plotters::style::colors::full_palette::GREEN): |x| f64::ln(x));
+    lab_main(&mut chart)?;
 
     chart
         .configure_series_labels()
@@ -78,6 +77,59 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn given_f(x: f64) -> f64 {
-    10.45f64.mul_add(-x, 1.6f64.mul_add(x.powi(3), -1.7 * x.powi(2)))
+// fn given_f(x: f64) -> f64 {
+//     10.45f64.mul_add(-x, 1.6f64.mul_add(x.powi(3), -1.7 * x.powi(2)))
+// }
+
+fn lab_main(
+    chart: &mut ChartContext<
+        '_,
+        BitMapBackend<'_>,
+        Cartesian2d<plotters::coord::types::RangedCoordf64, plotters::coord::types::RangedCoordf64>,
+    >,
+) -> Result<()> {
+    draw_function!(chart (colors::RED): original_fn);
+    draw_function!(chart (colors::CYAN): nth_sum(4));
+    for i in 1..=5 {
+        draw_function!(chart (colors::BLUE): compare(original_fn, nth_sum(i)));
+    }
+
+    Ok(())
+}
+
+fn compare(
+    mut f1: impl FnMut(f64) -> f64,
+    mut f2: impl FnMut(f64) -> f64,
+) -> impl FnMut(f64) -> f64 {
+    move |x| {
+        let f1_val = f1(x);
+        let f2_val = f2(x);
+        let val = f1_val - f2_val;
+        let val = val  / f1_val;
+        val
+    }
+}
+/// f(x) = x^2 * (e^x - x - 1)
+fn original_fn(x: f64) -> f64 {
+    x.powi(2) * f64::exp(x) - x.powi(3) - x.powi(2)
+}
+
+fn nth_sum(n: usize) -> impl Fn(f64) -> f64 {
+    move |x| sum(n, x)
+}
+
+/// f(x) = x^4/2! + x^5/3! + x^6/4! + …
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_precision_loss)]
+fn sum(n: usize, x: f64) -> f64 {
+    let mut sum = x.powi(4) / 2.0;
+    let mut current_summed = sum;
+
+    for i in 1..n {
+        current_summed *= x / (i as f64 + 2.0);
+        sum += current_summed;
+    }
+
+    sum
 }

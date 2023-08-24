@@ -12,12 +12,21 @@ use color_eyre::{eyre::anyhow, Result};
 use plotters::prelude::*;
 use plotters::style::colors;
 
-const Y_MAX: f64 = 5.0;
-const Y_MIN: f64 = -1.0;
+const Y_MAX: f64 = 100.0;
+const Y_MIN: f64 = 0.001;
 const X_MAX: f64 = 0.0;
 const X_MIN: f64 = -4.0;
 const NUM_POINTS_ON_DISPLAY: i32 = 15000;
 
+/// Draw any function that takes x (f64) and returns f64.
+/// Like this:
+/// ```rust
+/// fn do_sth(x: f64) -> f64 {
+///     4.0
+/// }
+///
+/// draw_function!(chart (color::Black): function)
+/// ```
 macro_rules! draw_function {
     ($chart:ident ($color:expr): $fun:expr) => {
         #[allow(clippy::redundant_closure)]
@@ -56,43 +65,30 @@ fn main() -> Result<()> {
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("y = f(x)", ("sans-serif", 50).into_font())
         .margin(5)
-        .x_label_area_size(30)
+        .x_label_area_size(15)
         .y_label_area_size(30)
-        .build_cartesian_2d(X_MIN..X_MAX, Y_MIN..Y_MAX)?;
+        .build_cartesian_2d(X_MIN..X_MAX, (Y_MIN..Y_MAX).log_scale())?;
 
     chart.configure_mesh().draw()?;
 
-    lab_main(&mut chart)?;
+    {
+        draw_function!(chart (colors::RED): original_fn);
+        draw_function!(chart (colors::CYAN): nth_sum(4));
+
+        for i in 1..=5 {
+            draw_function!(chart (colors::GREEN): compare(original_fn, nth_sum(i)));
+        }
+    }
 
     chart
         .configure_series_labels()
+        .position(SeriesLabelPosition::UpperRight)
         .background_style(WHITE.mix(0.8))
         .border_style(BLACK)
         .draw()?;
 
     root.present()?;
-
-    Ok(())
-}
-
-// fn given_f(x: f64) -> f64 {
-//     10.45f64.mul_add(-x, 1.6f64.mul_add(x.powi(3), -1.7 * x.powi(2)))
-// }
-
-fn lab_main(
-    chart: &mut ChartContext<
-        '_,
-        BitMapBackend<'_>,
-        Cartesian2d<plotters::coord::types::RangedCoordf64, plotters::coord::types::RangedCoordf64>,
-    >,
-) -> Result<()> {
-    draw_function!(chart (colors::RED): original_fn);
-    draw_function!(chart (colors::CYAN): nth_sum(4));
-    for i in 1..=5 {
-        draw_function!(chart (colors::BLUE): compare(original_fn, nth_sum(i)));
-    }
 
     Ok(())
 }
@@ -105,7 +101,7 @@ fn compare(
         let f1_val = f1(x);
         let f2_val = f2(x);
         let val = f1_val - f2_val;
-        let val = val  / f1_val;
+        let val = val / f1_val;
         val
     }
 }

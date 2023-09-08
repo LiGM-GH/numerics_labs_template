@@ -30,7 +30,7 @@ macro_rules! draw_function {
     }};
 }
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
     //! Use of `use` should be avoided as it may lead to injection of scope in the macro and thus lead to successful compilation in cases like the following:
     //! ```rust
@@ -39,7 +39,7 @@ mod tests {
     //!         Path::new("some/path")
     //!     }
     //! }
-    //! 
+    //!
     //! {
     //!     use std::path::Path;
     //!     // This compiles successfully
@@ -54,6 +54,7 @@ mod tests {
     //! ```
 
     const TESTS_DIR: &'static str = "tests";
+    static mut MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// Function which will be printed with the macro in question.
     fn function(_: f64) -> f64 {
@@ -66,8 +67,12 @@ mod tests {
 
     #[test]
     fn draw_function_draws() -> color_eyre::Result<()> {
-        if !std::fs::metadata(TESTS_DIR).is_ok_and(|val| val.is_dir()) {
-            std::fs::create_dir(std::path::Path::new(TESTS_DIR))?;
+        {
+            let _guard = unsafe { MUTEX.lock().ok() };
+
+            if !std::fs::metadata(TESTS_DIR).is_ok_and(|val| val.is_dir()) {
+                std::fs::create_dir(std::path::Path::new(TESTS_DIR))?;
+            }
         }
 
         let image_path = std::path::Path::new(TESTS_DIR).join("draw_test.png");
@@ -95,8 +100,12 @@ mod tests {
 
     #[test]
     fn draw_function_draws_and_changes_idents() -> color_eyre::Result<()> {
-        if !std::fs::metadata(TESTS_DIR).is_ok_and(|val| val.is_dir()) {
-            std::fs::create_dir(std::path::Path::new(TESTS_DIR))?;
+        {
+            let _guard = unsafe { MUTEX.lock().ok() };
+
+            if !std::fs::metadata(TESTS_DIR).is_ok_and(|val| val.is_dir()) {
+                std::fs::create_dir(std::path::Path::new(TESTS_DIR))?;
+            }
         }
 
         let image_path = std::path::Path::new(TESTS_DIR).join("changes_idents.png");
@@ -122,4 +131,3 @@ mod tests {
         Ok(())
     }
 }
-

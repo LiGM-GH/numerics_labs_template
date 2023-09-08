@@ -12,43 +12,13 @@ use color_eyre::{eyre::anyhow, Result};
 use plotters::prelude::*;
 use plotters::style::colors;
 
+mod draw_function_macro;
+
 const Y_MAX: f64 = 100.0;
 const Y_MIN: f64 = 0.001;
 const X_MAX: f64 = 0.0;
 const X_MIN: f64 = -4.0;
 const NUM_POINTS_ON_DISPLAY: i32 = 15000;
-
-/// Draw any function that takes x (f64) and returns f64.
-/// Like this:
-/// ```rust
-/// fn do_sth(x: f64) -> f64 {
-///     4.0
-/// }
-///
-/// draw_function!(chart (color::Black): function)
-/// ```
-macro_rules! draw_function {
-    ($chart:ident ($color:expr): $fun:expr) => {
-        #[allow(clippy::redundant_closure)]
-        #[allow(unused_variables)]
-        $chart
-            .draw_series(LineSeries::new(
-                (0..=NUM_POINTS_ON_DISPLAY).filter_map(|x| {
-                    let x = (x as f64 / NUM_POINTS_ON_DISPLAY as f64).mul_add(X_MAX - X_MIN, X_MIN);
-                    let y = $fun(x);
-
-                    if !(Y_MIN..Y_MAX).contains(&y) {
-                        return None;
-                    }
-
-                    Some((x, y))
-                }),
-                &$color,
-            ))?
-            .label(stringify!($fun).replace("|x| ", "y = "))
-            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &$color));
-    };
-}
 
 fn main() -> Result<()> {
     // Program can still execute if this fails, so we'll just ignore failure if it occurs.
@@ -72,14 +42,16 @@ fn main() -> Result<()> {
 
     chart.configure_mesh().draw()?;
 
+    /* ===============< THIS IS WHERE THE MAIN STARTS >=============== */
     {
         draw_function!(chart (colors::RED): original_fn);
         draw_function!(chart (colors::CYAN): nth_sum(4));
 
-        for i in 1..=5 {
-            draw_function!(chart (colors::GREEN): compare(original_fn, nth_sum(i)));
+        for idx in 1..=5 {
+            draw_function!(chart (colors::GREEN): compare(original_fn, nth_sum(idx)), idx = idx);
         }
     }
+    /* ===============<  THIS IS WHERE THE MAIN ENDS  >=============== */
 
     chart
         .configure_series_labels()
@@ -118,6 +90,7 @@ fn nth_sum(n: usize) -> impl Fn(f64) -> f64 {
 #[allow(clippy::cast_possible_wrap)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
+#[inline]
 fn sum(n: usize, x: f64) -> f64 {
     let mut sum = x.powi(4) / 2.0;
     let mut current_summed = sum;

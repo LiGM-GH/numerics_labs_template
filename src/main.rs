@@ -42,16 +42,7 @@ fn main() -> Result<()> {
 
     chart.configure_mesh().draw()?;
 
-    /* ===============< THIS IS WHERE THE MAIN STARTS >=============== */
-    {
-        draw_function!(chart (colors::RED): original_fn);
-        draw_function!(chart (colors::CYAN): nth_sum(4));
-
-        for idx in 1..=5 {
-            draw_function!(chart (colors::GREEN): compare(original_fn, nth_sum(idx)), idx = idx);
-        }
-    }
-    /* ===============<  THIS IS WHERE THE MAIN ENDS  >=============== */
+    lab_main(&mut chart)?;
 
     chart
         .configure_series_labels()
@@ -61,6 +52,22 @@ fn main() -> Result<()> {
         .draw()?;
 
     root.present()?;
+
+    Ok(())
+}
+
+pub fn lab_main<Backend, Coord>(chart: &mut ChartContext<Backend, Coord>) -> Result<()>
+where
+    Backend: DrawingBackend,
+    Backend::ErrorType: 'static,
+    Coord: CoordTranslate<From = (f64, f64)>,
+{
+    draw_function!(chart (colors::RED): original_fn);
+    draw_function!(chart (colors::CYAN): nth_sum(4));
+
+    for idx in 1..=5 {
+        draw_function!(chart (colors::GREEN): compare(original_fn, nth_sum(idx)), idx = idx);
+    }
 
     Ok(())
 }
@@ -77,6 +84,7 @@ fn compare(
         val
     }
 }
+
 /// f(x) = x^2 * (e^x - x - 1)
 fn original_fn(x: f64) -> f64 {
     x.powi(2) * f64::exp(x) - x.powi(3) - x.powi(2)

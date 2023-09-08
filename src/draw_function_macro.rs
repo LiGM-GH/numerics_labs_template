@@ -26,7 +26,7 @@ macro_rules! draw_function {
                     .replace(stringify!($ident), &format!("{:?}", $val))
                     )*,
             )
-            .legend(|(x, y)| plotters::prelude::PathElement::new(vec![(x, y), (x + 20, y)], &$color));
+            .legend(move |(x, y)| plotters::prelude::PathElement::new(vec![(x, y), (x + 20, y)], &$color));
     }};
 }
 

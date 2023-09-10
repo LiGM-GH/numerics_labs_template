@@ -3,31 +3,37 @@
 
 macro_rules! draw_function {
     ($chart:ident ($color:expr): $fun:expr$(, $ident:ident = $val:expr)*$(,)?) => {{
+        draw_bounded_function!($chart ($color, [crate::NUM_POINTS_ON_DISPLAY] {crate::Y_MIN, crate::Y_MAX} {crate::Y_MIN, crate::Y_MAX}): $fun $(, $ident = $val)*);
+    }};
+}
+
+macro_rules! draw_bounded_function {
+    ($chart:ident ($color:expr, [$NUM_POINTS_ON_DISPLAY:expr] {$X_MIN:expr, $X_MAX:expr} {$Y_MIN:expr, $Y_MAX:expr}): $fun:expr$(, $ident:ident = $val:expr)*$(,)?) => {{
         #[allow(clippy::redundant_closure)]
         #[allow(unused_variables)]
         $chart
             .draw_series(plotters::prelude::LineSeries::new(
-                (0..=crate::NUM_POINTS_ON_DISPLAY).filter_map(|x| {
-                    let x = (x as f64 / crate::NUM_POINTS_ON_DISPLAY as f64).mul_add(crate::X_MAX - crate::X_MIN, crate::X_MIN);
-                    let y = $fun(x);
+                    (0..=$NUM_POINTS_ON_DISPLAY).filter_map(|x| {
+                        let x = (x as f64 / $NUM_POINTS_ON_DISPLAY as f64).mul_add($X_MAX - $X_MIN, $X_MIN);
+                        let y = $fun(x);
 
-                    if !(crate::Y_MIN..crate::Y_MAX).contains(&y) {
-                        return None;
-                    }
+                        if !($Y_MIN..$Y_MAX).contains(&y) {
+                            return None;
+                        }
 
-                    Some((x, y))
-                }),
-                &$color,
+                        Some((x, y))
+                    }),
+                    &$color,
             ))?
             .label(
                 stringify!($fun)
-                    .replace("|x| ", "y = ")
-                    $(
+                .replace("|x| ", "y = ")
+                $(
                     .replace(stringify!($ident), &format!("{:?}", $val))
-                    )*,
+                )*,
             )
             .legend(move |(x, y)| plotters::prelude::PathElement::new(vec![(x, y), (x + 20, y)], &$color));
-    }};
+    }}
 }
 
 #[cfg(test)]

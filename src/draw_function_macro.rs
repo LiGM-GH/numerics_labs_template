@@ -7,6 +7,14 @@ macro_rules! draw_function {
     }};
 }
 
+/// ```
+/// ($chart:ident (
+///     $color:expr,
+///     [$NUM_POINTS_ON_DISPLAY:expr]
+///     {$X_MIN:expr, $X_MAX:expr}
+///     {$Y_MIN:expr, $Y_MAX:expr}
+/// ): $fun:expr$(, $ident:ident = $val:expr)*$(,)?) => {{
+/// ```
 macro_rules! draw_bounded_function {
     ($chart:ident ($color:expr, [$NUM_POINTS_ON_DISPLAY:expr] {$X_MIN:expr, $X_MAX:expr} {$Y_MIN:expr, $Y_MAX:expr}): $fun:expr$(, $ident:ident = $val:expr)*$(,)?) => {{
         #[allow(clippy::redundant_closure)]
